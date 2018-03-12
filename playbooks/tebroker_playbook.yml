@@ -1,0 +1,5 @@
+---
+- name: Set up te-broker
+  hosts: te-broker
+  roles:
+    - te-broker
