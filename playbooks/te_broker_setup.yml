@@ -52,22 +52,32 @@
         nics:
           - port-name: te-broker-port
         timeout: 300
+        userdata: |
+          #cloud-config
+          ssh_authorized_keys:
+            - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDDhi/BqsZibuAPiUjJe7b3Dqe5nyI7BckOwfGwJYg436+bFQMoR/7RKmtPe+ISVQ04lwIriIPwKGaSHj5mbEe4LsCLZ5jAUHxvWfgHitqS5ln295zU7vp1z28o7e6LQNplgExyqQlxUPdOU48tmlz93F6szSYkNYvZnhzMn9syrajC74qPuKsmHTeYFLEcxesb7/u+BtxCk8WdjYTb//sk038NEtIsNhrGtAOV3WcDpXnA5mNMpUfeoQ4yiN9LqtreXr7Zeo587LV3T2QL+huAE0J7EuCzHAKk6TIzJqjLidg0SYwZZwfbxgviU66QLkeyzh9oiovwskelvOQCBFq3 sshnaidm@sshnaidm.remote.csb.new
+          packages:
+            - ansible
+            - git
+          package_upgrade: true
+          runcmd:
+            - ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C teb2  --clean playbooks/tebroker_playbook.yml 2>&1 >>/var/log/ansible-pull.log
       register: 'os_host'
-
-    - name: add hosts to inventory
-      add_host:
-        name: '{{ os_host.openstack.name }}'
-        ansible_user: centos
-        ansible_host: '{{ os_host.openstack.accessIPv4 }}'
-        ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
-
-    - name: Wait 300 seconds for port 22 to become open and contain "OpenSSH"
-      wait_for:
-        port: 22
-        host: '{{ os_host.openstack.accessIPv4 }}'
-        search_regex: OpenSSH
-        delay: 10
-      vars:
-        ansible_connection: local
-
-- include: tebroker_playbook.yml
+#
+#    - name: add hosts to inventory
+#      add_host:
+#        name: '{{ os_host.openstack.name }}'
+#        ansible_user: centos
+#        ansible_host: '{{ os_host.openstack.accessIPv4 }}'
+#        ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+#
+#    - name: Wait 300 seconds for port 22 to become open and contain "OpenSSH"
+#      wait_for:
+#        port: 22
+#        host: '{{ os_host.openstack.accessIPv4 }}'
+#        search_regex: OpenSSH
+#        delay: 10
+#      vars:
+#        ansible_connection: local
+#
+#- include: tebroker_playbook.yml

@@ -218,4 +218,4 @@
     name: 'fetch the latest ci-config repo and run ansible'
     minute: '*/5'
     user: root
-    job: 'ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C tebroker2  --clean playbooks/tebroker_playbook.yml 2>&1 >>/var/log/ansible-pull.log'
+    job: 'ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C teb2  --clean playbooks/tebroker_playbook.yml 2>&1 >>/var/log/ansible-pull.log'
