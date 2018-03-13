@@ -216,5 +216,6 @@
 - name: Update repo and run ansible
   cron:
     name: 'fetch the latest ci-config repo and run ansible'
-    minute: '5,15,25,35,45,55'
-    job: '*/15 * * * * root ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C tebroker2  --clean >>/var/log/ansible-pull.log 2>&1'
+    minute: '*/5'
+    user: root
+    job: 'ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C tebroker2  --clean >>/var/log/ansible-pull.log 2>&1'
