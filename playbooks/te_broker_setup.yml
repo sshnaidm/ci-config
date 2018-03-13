@@ -61,6 +61,8 @@
             - git
           package_upgrade: true
           runcmd:
+            - mkdir -p /etc/ansible/
+            - echo 'te-broker ansible_host=localhost' >  /etc/ansible/hosts
             - ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C teb2  --clean playbooks/tebroker_playbook.yml 2>&1 >>/var/log/ansible-pull.log
       register: 'os_host'
 #
