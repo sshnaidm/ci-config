@@ -217,4 +217,4 @@
   cron:
     name: 'fetch the latest ci-config repo and run ansible'
     minute: '5,15,25,35,45,55'
-    job: 'cd /opt/stack/ci-config; sudo git checkout tebroker; sudo git pull origin tebroker >/var/log/update.log; ansible-playbook /opt/stack/ci-config/playbooks/tebroker_playbook.yml &>>/var/log/update.log'
+    job: '*/15 * * * * root ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C tebroker2  --clean >>/var/log/ansible-pull.log 2>&1'
