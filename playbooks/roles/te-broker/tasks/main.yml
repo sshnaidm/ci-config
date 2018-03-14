@@ -22,23 +22,6 @@
       state: restarted
     when: journal_config|changed
 
-  - name: Do a trick to update server only once
-    stat:
-      path: ~/update_server
-    register: update_file
-
-  - name: Update packages on the server only once
-    yum:
-      name: '*'
-      state: latest
-    when: not update_file.stat.exists
-
-  - name: Ensure the update file exists
-    copy:
-      dest: ~/update_server
-      content: ''
-    register: update_file
-
   - name: Install required packages
     yum:
       name: 'epel-release'
@@ -67,6 +50,7 @@
       - python-novaclient
       - python-swiftclient
       - python-openstackclient
+      - logrotate
 
   - name: Install required python modules
     pip:
@@ -89,7 +73,7 @@
         path: /opt/stack/tripleo-ci
       - repo: https://github.com/cybertron/openstack-virtual-baremetal.git
         path: /opt/stack/openstack-virtual-baremetal
-      #- repo: https://review.rdoproject.org/r/p/rdo-infra/ci-config.git
+      #FIXME: - repo: https://review.rdoproject.org/r/p/rdo-infra/ci-config.git
       - repo: https://github.com/sshnaidm/ci-config.git
         path: /opt/stack/ci-config
 
@@ -117,19 +101,19 @@
       path: '{{ logsdir }}'
       state: directory
 
-  - name: Add secrets for the registries
-    no_log: true
-    blockinfile:
-      path: /etc/nodepoolrc
-      create: yes
-      mode: 0600
-      block: |
-        export OS_USERNAME='{{ lookup('env', 'OS_USERNAME') }}'
-        export OS_TENANT_NAME='{{ lookup('env', 'OS_TENANT_NAME') }}'
-        export OS_TENANT_ID='{{ lookup('env', 'OS_TENANT_ID') }}'
-        export OS_AUTH_URL='{{ lookup('env', 'OS_AUTH_URL') }}'
-        export OS_PASSWORD='{{ lookup('env', 'OS_PASSWORD') }}'
-        export NODEPOOL_PROVIDER=rdo-cloud-tripleo
+#  - name: Add secrets for the registries
+#    no_log: true
+#    blockinfile:
+#      path: /etc/nodepoolrc
+#      create: yes
+#      mode: 0600
+#      block: |
+#        export OS_USERNAME='{{ lookup('env', 'OS_USERNAME') }}'
+#        export OS_TENANT_NAME='{{ lookup('env', 'OS_TENANT_NAME') }}'
+#        export OS_TENANT_ID='{{ lookup('env', 'OS_TENANT_ID') }}'
+#        export OS_AUTH_URL='{{ lookup('env', 'OS_AUTH_URL') }}'
+#        export OS_PASSWORD='{{ lookup('env', 'OS_PASSWORD') }}'
+#        export NODEPOOL_PROVIDER=rdo-cloud-tripleo
 
   - name: Disable the default welcome page
     copy:
@@ -161,20 +145,32 @@
       enabled: yes
     when: apache_config|changed
 
-  - name: add configuration for the log rotation
+  - name: add configuration for the te-broker log rotation
     copy:
       content: |
-          {{ logsdir }}/*.log {
+          {{ logsdir }}/testenv-worker.log {
+              rotate 7
               daily
+              compress
               missingok
-              su centos centos
-              dateext
-              dateyesterday
               notifempty
-              delaycompress
-              rotate 60
           }
       dest: /etc/logrotate.d/te-broker
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: add configuration for the ansible-pull log rotation
+    copy:
+      content: |
+          /var/log/ansible-pull.log {
+              rotate 7
+              daily
+              compress
+              missingok
+              notifempty
+          }
+      dest: /etc/logrotate.d/ansible-pull
       owner: root
       group: root
       mode: 0644
@@ -182,15 +178,23 @@
   - name: Create ansible directory
     file:
       path: /etc/ansible
+      state: directory
 
   - name: Create a hosts file
     copy:
       dest: /etc/ansible/hosts
       content: te-broker ansible_host=localhost
 
+  - name: Create ansible config
+    copy:
+      dest: /etc/ansible/ansible.cfg
+      content: |
+        [defaults]
+        host_key_checking = False
+
 # Non root actions
 
-- name: Generate public key from private key for uploader user
+- name: Generate public key
   shell: |
     mkdir -p ~/.ssh
     cd ~/.ssh
@@ -206,16 +210,10 @@
     line: pub_key.output
   when: pub_key is defined
 
-- name: Create ansible config
-  copy:
-    dest: ~/.ansible.cfg
-    content: |
-      [defaults]
-      host_key_checking = False
-
-- name: Update repo and run ansible
+- name: Add ansible-pull to cron
   cron:
     name: 'fetch the latest ci-config repo and run ansible'
     minute: '*/5'
     user: root
+    # FIXME:
     job: 'ansible-pull -d /var/lib/ansible/local -U https://github.com/sshnaidm/ci-config.git -C teb2  --clean playbooks/tebroker_playbook.yml 2>&1 >>/var/log/ansible-pull.log'
